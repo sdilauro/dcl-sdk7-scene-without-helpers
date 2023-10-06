@@ -5,6 +5,7 @@ import { nftDisplay } from './entities/nft_display'
 import { nftBTTF, nftStarWars, stingray } from './utils/config'
 import { setUVs } from './utils/functions'
 import { wolf } from './entities/wolf/index'
+import { setupUi } from './ui'
 
 
 
@@ -115,6 +116,6 @@ export function main() {
     nftDisplay(Vector3.create(0.3, 2, 12), stingray, 270, 4, "https://gateway.pinata.cloud/ipfs/Qmd3eMnYQsgXjuhad1fdUCBnCQvzpoLKwRkMUrBDjedGtT/Cozumel%20Diving.mp4")
     wolf(Vector3.create(8, .2, 8), 0)
 
-
+    setupUi()
 }
 

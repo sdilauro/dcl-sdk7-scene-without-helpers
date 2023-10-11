@@ -1,121 +1,196 @@
-import { AudioSource, AvatarAttach, Billboard, CameraModeArea, CameraType, engine, GltfContainer, InputAction, Material, MeshCollider, MeshRenderer, PBMeshCollider, PBMeshCollider_BoxMesh, PointerEvents, pointerEventsSystem, TextShape, TextureUnion, TextureWrapMode, Transform, VisibilityComponent } from '@dcl/sdk/ecs'
-import { Quaternion, Vector3 } from '@dcl/sdk/math'
-import { cinema } from './entities/cinema'
-import { nftDisplay } from './entities/nft_display'
-import { nftBTTF, nftStarWars, stingray } from './utils/config'
-import { setUVs } from './utils/functions'
-import { wolf } from './entities/wolf/index'
-import { setupUi } from './ui'
+import { Billboard, ColliderLayer, engine, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, raycastSystem, TextShape, Transform } from '@dcl/sdk/ecs'
+import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
 
 
 
 export function main() {
 
+    let playing: Boolean = false
+    let paused: Boolean = false
+    let points_value: number = 0
 
-    /* function machineNameSystem(dt: number) {
-        let step: number = 0.1
-        const bot: number = 2
-        const top: number = 4
-        let pos: Vector3 = Transform.getMutable(MachineName).position
+    const Points = engine.addEntity()
+    const Cube = engine.addEntity()
+    const Pivot = engine.addEntity()
+    const Tower = engine.addEntity()
+    const Lamp = engine.addEntity()
+    const Ray = engine.addEntity()
+    const RaycastEntity = engine.addEntity()
+    const PlayerCollider = engine.addEntity()
 
-        if (pos.y > top || pos.y < bot) {
-            step = -step   //This is wrong: Step don't save value, is declared on each tick
+
+    MeshCollider.create(PlayerCollider, { mesh: { $case: "box", box: { uvs: [] } }, collisionMask: ColliderLayer.CL_CUSTOM1 })
+    Transform.create(PlayerCollider, { parent: engine.PlayerEntity, scale: Vector3.create(1, 2, 1) })
+
+
+    function System(dt: number) {
+        let rotation = Transform.getMutable(Pivot).rotation
+        let position = Transform.getMutable(Pivot).position
+        if (playing && !paused) {
+            Transform.createOrReplace(
+                Pivot,
+                {
+                    position: position,
+                    rotation: Quaternion.multiply(
+                        rotation,
+                        Quaternion.fromAngleAxis(dt * 100, Vector3.Up())
+                    )
+                }
+            )
         }
 
-        Transform.getMutable(MachineName).position.y = Transform.getMutable(MachineName).position.y + step
+    }
 
-    } */
+    engine.addSystem(System)
 
-    //engine.addSystem(machineNameSystem)
+    Transform.create(Pivot, { position: Vector3.create(8, 0.5, 8) })
 
-    const postersWall = engine.addEntity()
-    const bucketParent = engine.addEntity()
-    const popcornBucket = engine.addEntity()
-    const popcornMachine = engine.addEntity()
-    const popcornCollider = engine.addEntity()
-    const machineName = engine.addEntity()
-    const cameraForcer = engine.addEntity()
-    let playing: boolean = false
-
-
-
-    Transform.create(popcornMachine, { position: Vector3.create(2, 0, 1), scale: Vector3.create(1.5, 1.5, 1.5) })
-    GltfContainer.getOrCreateMutable(popcornMachine, { src: "assets/models/machine/PopcornMachine.gltf" })
-    AudioSource.create(popcornMachine, { playing: playing, loop: true, volume: 0.6, audioClipUrl: "assets/sounds/popcorn.mp3" })
-
-    Transform.create(popcornCollider, { parent: popcornMachine, position: Vector3.create(0, .75, 0), scale: Vector3.create(1 / 1.5, 1.5, 1 / 1.5) })
-    //MeshRenderer.getOrCreateMutable(PopcornCollider, { mesh: { $case: "box", box: { uvs: [] } } })
-    MeshCollider.getOrCreateMutable(popcornCollider, { mesh: { $case: "box", box: PBMeshCollider_BoxMesh } })
-
-    Transform.create(popcornBucket, {
-        rotation: Quaternion.fromEulerDegrees(180, 0, 0),
-        position: Vector3.create(0, 0.2, 0.1),
-        parent: bucketParent
+    Transform.createOrReplace(Tower, {
+        scale: Vector3.create(1, 2, 1),
+        parent: Pivot
     })
-    VisibilityComponent.createOrReplace(popcornBucket, { visible: false })
-    GltfContainer.getOrCreateMutable(popcornBucket, { src: "assets/models/bucket/bucket.gltf" })
+    MeshRenderer.create(Tower, { mesh: { $case: "cylinder", cylinder: { radiusTop: .5, radiusBottom: 0.5 } } })
 
-    AvatarAttach.create(bucketParent, { anchorPointId: 3 })
 
-    Transform.create(cameraForcer, { parent: popcornMachine })
-    CameraModeArea.create(cameraForcer, { mode: CameraType.CT_FIRST_PERSON, area: Vector3.create(3, 1, 3) })
+    Transform.createOrReplace(Lamp, {
+        position: Vector3.create(0, 1, 0),
+        parent: Pivot
+    })
+    MeshRenderer.create(Lamp, { mesh: { $case: "sphere", sphere: {} } })
+    MeshCollider.create(Lamp, { mesh: { $case: "sphere", sphere: {} } })
 
-    Transform.create(machineName, { parent: popcornMachine, position: Vector3.create(0, 2.5, 0) })
 
-    Billboard.getOrCreateMutable(machineName, { billboardMode: 2 })
-    TextShape.getOrCreateMutable(machineName, { text: `Free\nPopcorn\nhere\nvv`, fontSize: 2 })
 
-    let Text: string = AudioSource.getMutable(popcornMachine).playing ? "Turn off" : "Start"
 
-    pointerEventsSystem.onPointerDown(
+    Transform.createOrReplace(Ray, {
+        position: Vector3.create(0, 0, 3),
+        parent: Pivot,
+        scale: Vector3.create(1, 5, 1),
+        rotation: Quaternion.fromAngleAxis(90, Vector3.Right())
+    })
+    MeshRenderer.create(Ray, { mesh: { $case: "cylinder", cylinder: { radiusBottom: 0.1, radiusTop: 0.1 } } })
 
+    Transform.create(Cube, { position: Vector3.create(6, 0.5, 6) })
+    MeshRenderer.create(Cube, { mesh: { $case: "box", box: { uvs: [] } } })
+    MeshCollider.create(Cube, { mesh: { $case: "box", box: { uvs: [] } } })
+
+    TextShape.create(Points, { text: String(points_value), fontSize: 5 })
+    Transform.create(Points, { parent: Lamp, position: Vector3.create(0, 1, 0) })
+    Billboard.create(Points)
+
+    Transform.createOrReplace(RaycastEntity, { parent: Pivot })
+
+    raycastSystem.registerLocalDirectionRaycast(
         {
-            entity: popcornCollider,
+            entity: RaycastEntity,
+
             opts: {
-                button: InputAction.IA_POINTER,
-                hoverText: Text,
-                maxDistance: 0.75
-            }
+                direction: Vector3.Forward(),
+                maxDistance: 4,
+                queryType: RaycastQueryType.RQT_QUERY_ALL,
+                continuous: true,
+                collisionMask: ColliderLayer.CL_CUSTOM1
+            },
         },
-        function () {
-            const t = AudioSource.getMutable(popcornMachine)
-            t.playing = !t.playing
-            const hoverFeedback = PointerEvents.getMutable(popcornCollider)
-            if (hoverFeedback.pointerEvents[0].eventInfo !== undefined) {
-                if (t.playing) {
-                    hoverFeedback.pointerEvents[0].eventInfo.hoverText = 'Turn Off'
-                    VisibilityComponent.createOrReplace(popcornBucket, { visible: true })
-                }
-                if (!t.playing) {
-                    hoverFeedback.pointerEvents[0].eventInfo.hoverText = 'Start'
-                    VisibilityComponent.createOrReplace(popcornBucket, { visible: false })
-                }
+        function (raycastResult) {
+            if (raycastResult.hits.length > 0) {
+                stopGame()
+
+            } else if (playing && !paused) {
+                points_value = points_value + 1
+                TextShape.createOrReplace(Points, { text: String(points_value) })
             }
 
+        }
 
+
+    )
+
+
+    PointerEvents.create(Lamp, {
+        pointerEvents: [
+            {
+                eventType: PointerEventType.PET_DOWN,
+                eventInfo: {
+                    button: InputAction.IA_PRIMARY,
+                    showFeedback: true,
+                    hoverText: "Pause/Resume Game",
+                    maxDistance: 8
+                },
+
+            },
+            {
+                eventType: PointerEventType.PET_DOWN,
+                eventInfo: {
+                    button: InputAction.IA_POINTER,
+                    showFeedback: true,
+                    hoverText: "Start/Stop Game",
+                    maxDistance: 8
+                },
+
+            }
+        ]
+    })
+
+    engine.addSystem(() => {
+        if (inputSystem.isTriggered(InputAction.IA_POINTER, PointerEventType.PET_DOWN, Lamp)) {
+            if (!playing && !paused) {
+                startGame()
+            } else if (!paused) {
+                stopGame()
+            }
+        }
+        if (inputSystem.isTriggered(InputAction.IA_PRIMARY, PointerEventType.PET_DOWN, Lamp)) {
+            if (playing) {
+                paused = !paused
+            }
+        }
+    })
+
+    function stopGame() {
+        playing = false
+        paused = false
+        Material.setPbrMaterial(
+            Lamp, {
+            metallic: 2,
+            roughness: 0,
+            specularIntensity: 1,
+            directIntensity: 0,
+            emissiveColor: Color4.Red(),
+            emissiveIntensity: 2
         })
+        Transform.createOrReplace(
+            Pivot,
+            {
+                position: Vector3.create(8, 0.5, 8),
+                rotation: Quaternion.fromAngleAxis(0, Vector3.Up())
+            }
+        )
+    }
 
-    cinema()
-
-
-    Transform.createOrReplace(postersWall, { position: Vector3.create(0.2, 4.25, 8), scale: Vector3.create(8.5, 16, 0.2), rotation: Quaternion.fromEulerDegrees(0, 90, 90) })
-    MeshRenderer.createOrReplace(postersWall, { mesh: { $case: "plane", plane: { uvs: setUVs(18, 10) } } })
-    MeshCollider.createOrReplace(postersWall, { mesh: { $case: "plane", plane: { uvs: setUVs(18, 10) } } })
-    Material.setPbrMaterial(
-        postersWall,
-
-        {
-            texture:
-                Material.Texture.Common({
-                    src: 'assets/materials/bricks.png',
-                    wrapMode: TextureWrapMode.TWM_REPEAT
-                })
+    function startGame() {
+        playing = true
+        paused = false
+        Material.setPbrMaterial(
+            Lamp, {
+            metallic: 2,
+            roughness: 0,
+            specularIntensity: 1,
+            directIntensity: 0,
+            emissiveColor: Color4.Green(),
+            emissiveIntensity: 2
         })
-    nftDisplay(Vector3.create(0.3, 2, 8), nftStarWars, 270, 4, "assets/videos/starwarstrailer.mp4")
-    nftDisplay(Vector3.create(0.3, 2, 4), nftBTTF, 270, 4, "assets/videos/bttftrailer.mp4")
-    nftDisplay(Vector3.create(0.3, 2, 12), stingray, 270, 4, "https://gateway.pinata.cloud/ipfs/Qmd3eMnYQsgXjuhad1fdUCBnCQvzpoLKwRkMUrBDjedGtT/Cozumel%20Diving.mp4")
-    wolf(Vector3.create(8, .2, 8), 0)
+        points_value = 0
+        Transform.createOrReplace(
+            Pivot,
+            {
+                position: Vector3.create(8, 0.5, 8),
+                rotation: Quaternion.fromAngleAxis(0, Vector3.Up())
+            }
+        )
+    }
 
-    setupUi()
+
 }
+
 

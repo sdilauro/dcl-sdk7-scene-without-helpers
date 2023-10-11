@@ -1,4 +1,4 @@
-import { Billboard, ColliderLayer, engine, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, raycastSystem, TextShape, Transform } from '@dcl/sdk/ecs'
+import { Billboard, ColliderLayer, engine, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, raycastSystem, Schemas, TextShape, Transform } from '@dcl/sdk/ecs'
 import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
 
 
@@ -8,6 +8,16 @@ export function main() {
     let playing: Boolean = false
     let paused: Boolean = false
     let points_value: number = 0
+
+
+    const TimerComponent = engine.defineComponent('TimerComponent', {
+        t: Schemas.Float,
+    })
+
+    TimerComponent.create(engine.addEntity())
+
+    const RAY_INTERVAL = 0.1
+
 
     const Points = engine.addEntity()
     const Cube = engine.addEntity()
@@ -21,6 +31,40 @@ export function main() {
 
     MeshCollider.create(PlayerCollider, { mesh: { $case: "box", box: { uvs: [] } }, collisionMask: ColliderLayer.CL_CUSTOM1 })
     Transform.create(PlayerCollider, { parent: engine.PlayerEntity, scale: Vector3.create(1, 2, 1) })
+
+
+    engine.addSystem((dt) => {
+        for (const [entity] of engine.getEntitiesWith(TimerComponent)) {
+            const timer = TimerComponent.getMutable(entity)
+            timer.t += dt
+
+            if (timer.t > RAY_INTERVAL) {
+                timer.t = 0
+                raycastSystem.registerGlobalDirectionRaycast(
+                    {
+                        entity: RaycastEntity,
+                        opts: {
+                            queryType: RaycastQueryType.RQT_HIT_FIRST,
+                            direction: Vector3.Forward(),
+                            maxDistance: 16,
+                            collisionMask: ColliderLayer.CL_CUSTOM1
+                        },
+                    },
+                    function (raycastResult) {
+                        if (raycastResult.hits.length > 0) {
+                            stopGame()
+
+                        } else if (playing && !paused) {
+                            points_value = points_value + 1
+                            TextShape.createOrReplace(Points, { text: String(points_value) })
+                        }
+
+                    }
+                )
+            }
+        }
+    })
+
 
 
     function System(dt: number) {
@@ -79,33 +123,6 @@ export function main() {
     Billboard.create(Points)
 
     Transform.createOrReplace(RaycastEntity, { parent: Pivot })
-
-    raycastSystem.registerLocalDirectionRaycast(
-        {
-            entity: RaycastEntity,
-
-            opts: {
-                direction: Vector3.Forward(),
-                maxDistance: 4,
-                queryType: RaycastQueryType.RQT_QUERY_ALL,
-                continuous: true,
-                collisionMask: ColliderLayer.CL_CUSTOM1
-            },
-        },
-        function (raycastResult) {
-            if (raycastResult.hits.length > 0) {
-                stopGame()
-
-            } else if (playing && !paused) {
-                points_value = points_value + 1
-                TextShape.createOrReplace(Points, { text: String(points_value) })
-            }
-
-        }
-
-
-    )
-
 
     PointerEvents.create(Lamp, {
         pointerEvents: [

@@ -1,9 +1,12 @@
 import { Billboard, ColliderLayer, engine, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, raycastSystem, TextShape, Transform } from '@dcl/sdk/ecs'
 import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
+import { TimerComponent } from './components/index'
 
 
 
 export function main() {
+
+    const point_interval: number = 1
 
     let playing: Boolean = false
     let paused: Boolean = false
@@ -17,13 +20,22 @@ export function main() {
     const Ray = engine.addEntity()
     const RaycastEntity = engine.addEntity()
     const PlayerCollider = engine.addEntity()
+    const Timer = engine.addEntity()
+
+    TimerComponent.create(Timer, { t: 0 })
 
 
     MeshCollider.create(PlayerCollider, { mesh: { $case: "box", box: { uvs: [] } }, collisionMask: ColliderLayer.CL_CUSTOM1 })
     Transform.create(PlayerCollider, { parent: engine.PlayerEntity, scale: Vector3.create(1, 2, 1) })
 
 
-    function System(dt: number) {
+    engine.addSystem((dt) => {
+        for (const [entity] of engine.getEntitiesWith(TimerComponent)) {
+            const timer = TimerComponent.getMutable(entity)
+            timer.t += dt
+            timer.t = timer.t + dt
+        }
+
         let rotation = Transform.getMutable(Pivot).rotation
         let position = Transform.getMutable(Pivot).position
         if (playing && !paused) {
@@ -38,10 +50,8 @@ export function main() {
                 }
             )
         }
+    })
 
-    }
-
-    engine.addSystem(System)
 
     Transform.create(Pivot, { position: Vector3.create(8, 0.5, 8) })
 
@@ -86,7 +96,7 @@ export function main() {
 
             opts: {
                 direction: Vector3.Forward(),
-                maxDistance: 4,
+                maxDistance: 5.5,
                 queryType: RaycastQueryType.RQT_QUERY_ALL,
                 continuous: true,
                 collisionMask: ColliderLayer.CL_CUSTOM1
@@ -96,7 +106,9 @@ export function main() {
             if (raycastResult.hits.length > 0) {
                 stopGame()
 
-            } else if (playing && !paused) {
+
+            } else if (playing && !paused && TimerComponent.getMutable(Timer).t >= point_interval) {
+                TimerComponent.getMutable(Timer).t = 0
                 points_value = points_value + 1
                 TextShape.createOrReplace(Points, { text: String(points_value) })
             }
@@ -148,6 +160,7 @@ export function main() {
     })
 
     function stopGame() {
+        TimerComponent.getMutable(Timer).t = 0
         playing = false
         paused = false
         Material.setPbrMaterial(
@@ -169,6 +182,9 @@ export function main() {
     }
 
     function startGame() {
+        points_value = 0
+        TextShape.createOrReplace(Points, { text: String(points_value) })
+        TimerComponent.createOrReplace(Timer, { t: 0 })
         playing = true
         paused = false
         Material.setPbrMaterial(

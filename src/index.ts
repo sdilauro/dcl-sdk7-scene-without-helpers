@@ -1,5 +1,6 @@
-import { Billboard, ColliderLayer, engine, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, raycastSystem, Schemas, TextShape, Transform } from '@dcl/sdk/ecs'
+import { Billboard, ColliderLayer, engine, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, RaycastResult, raycastSystem, Schemas, TextShape, Transform } from '@dcl/sdk/ecs'
 import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
+import { TimerComponent } from './components/index'
 
 
 
@@ -10,13 +11,8 @@ export function main() {
     let points_value: number = 0
 
 
-    const TimerComponent = engine.defineComponent('TimerComponent', {
-        t: Schemas.Float,
-    })
 
-    TimerComponent.create(engine.addEntity())
-
-    const RAY_INTERVAL = 0.1
+    const RAY_INTERVAL = 1
 
 
     const Points = engine.addEntity()
@@ -27,47 +23,16 @@ export function main() {
     const Ray = engine.addEntity()
     const RaycastEntity = engine.addEntity()
     const PlayerCollider = engine.addEntity()
+    const Timer = engine.addEntity()
+
+    TimerComponent.create(Timer, { t: 0 })
 
 
     MeshCollider.create(PlayerCollider, { mesh: { $case: "box", box: { uvs: [] } }, collisionMask: ColliderLayer.CL_CUSTOM1 })
     Transform.create(PlayerCollider, { parent: engine.PlayerEntity, scale: Vector3.create(1, 2, 1) })
-
+    Transform.createOrReplace(RaycastEntity, { parent: Pivot })
 
     engine.addSystem((dt) => {
-        for (const [entity] of engine.getEntitiesWith(TimerComponent)) {
-            const timer = TimerComponent.getMutable(entity)
-            timer.t += dt
-
-            if (timer.t > RAY_INTERVAL) {
-                timer.t = 0
-                raycastSystem.registerGlobalDirectionRaycast(
-                    {
-                        entity: RaycastEntity,
-                        opts: {
-                            queryType: RaycastQueryType.RQT_HIT_FIRST,
-                            direction: Vector3.Forward(),
-                            maxDistance: 16,
-                            collisionMask: ColliderLayer.CL_CUSTOM1
-                        },
-                    },
-                    function (raycastResult) {
-                        if (raycastResult.hits.length > 0) {
-                            stopGame()
-
-                        } else if (playing && !paused) {
-                            points_value = points_value + 1
-                            TextShape.createOrReplace(Points, { text: String(points_value) })
-                        }
-
-                    }
-                )
-            }
-        }
-    })
-
-
-
-    function System(dt: number) {
         let rotation = Transform.getMutable(Pivot).rotation
         let position = Transform.getMutable(Pivot).position
         if (playing && !paused) {
@@ -77,15 +42,48 @@ export function main() {
                     position: position,
                     rotation: Quaternion.multiply(
                         rotation,
-                        Quaternion.fromAngleAxis(dt * 100, Vector3.Up())
+                        Quaternion.fromAngleAxis(dt * 50, Vector3.Up())
                     )
                 }
             )
         }
 
-    }
+    })
 
-    engine.addSystem(System)
+    engine.addSystem((dt) => {
+        for (const [entity] of engine.getEntitiesWith(TimerComponent)) {
+            const timer = TimerComponent.getMutable(entity)
+            timer.t = timer.t + dt
+
+            if (timer.t > RAY_INTERVAL) {
+                timer.t = 0
+                raycastSystem.registerLocalDirectionRaycast(
+                    {
+                        entity: Pivot,
+                        opts: {
+                            queryType: RaycastQueryType.RQT_HIT_FIRST,
+                            direction: Vector3.Forward(),
+                            maxDistance: 5.5,
+                            collisionMask: ColliderLayer.CL_CUSTOM1
+                        },
+                    },
+                    function (raycastResult) {
+                        if (playing && !paused) {
+                            if (raycastResult.hits.length > 0) {
+                                console.log(raycastResult.hits)
+                                stopGame()
+
+                            } else {
+                                points_value = points_value + 1
+                                TextShape.createOrReplace(Points, { text: String(points_value) })
+                            }
+                        }
+
+                    }
+                )
+            }
+        }
+    })
 
     Transform.create(Pivot, { position: Vector3.create(8, 0.5, 8) })
 
@@ -122,7 +120,6 @@ export function main() {
     Transform.create(Points, { parent: Lamp, position: Vector3.create(0, 1, 0) })
     Billboard.create(Points)
 
-    Transform.createOrReplace(RaycastEntity, { parent: Pivot })
 
     PointerEvents.create(Lamp, {
         pointerEvents: [
@@ -198,6 +195,7 @@ export function main() {
             emissiveIntensity: 2
         })
         points_value = 0
+        TextShape.createOrReplace(Points, { text: String(points_value) })
         Transform.createOrReplace(
             Pivot,
             {

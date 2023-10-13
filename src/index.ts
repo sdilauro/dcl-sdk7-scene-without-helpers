@@ -1,10 +1,26 @@
-import { Billboard, ColliderLayer, engine, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, raycastSystem, TextShape, Transform } from '@dcl/sdk/ecs'
+import { AvatarShape, Billboard, ColliderLayer, engine, executeTask, InputAction, inputSystem, Material, MeshCollider, MeshRenderer, PBAvatarShape, PointerEvents, pointerEventsSystem, PointerEventType, RaycastQueryType, raycastSystem, TextShape, Transform } from '@dcl/sdk/ecs'
 import { Color4, Quaternion, Vector3 } from '@dcl/sdk/math'
 import { TimerComponent } from './components/index'
+import { getUserData } from '~system/UserIdentity'
 
 
 
 export function main() {
+
+    let avatar_id: string = ''
+    executeTask(async () => {
+        let userData = await getUserData({})
+        if (userData.data && userData.data.userId.length > 0) {
+            console.log('User data userID isnt undefined')
+            Material.setPbrMaterial(Avatar, {
+                texture: Material.Texture.Avatar({
+                    userId: userData.data.userId
+                })
+            })
+        }
+
+    })
+
 
     const point_interval: number = 1
 
@@ -21,6 +37,10 @@ export function main() {
     const RaycastEntity = engine.addEntity()
     const PlayerCollider = engine.addEntity()
     const Timer = engine.addEntity()
+    const Avatar = engine.addEntity()
+
+    Transform.createOrReplace(Avatar, { parent: Points, position: Vector3.create(0, 1, 0) })
+    MeshRenderer.createOrReplace(Avatar, { mesh: { $case: 'plane', plane: { uvs: [] } } })
 
     TimerComponent.create(Timer, { t: 0 })
 
@@ -205,6 +225,7 @@ export function main() {
             }
         )
     }
+
 
 
 }

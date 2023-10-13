@@ -6,28 +6,11 @@ import { nftBTTF, nftStarWars, stingray } from './utils/config'
 import { setUVs } from './utils/functions'
 import { wolf } from './entities/wolf/index'
 import { setupUi } from './ui'
+import { LerpTransformComponent } from './components/index'
 
 
 
 export function main() {
-
-
-    /* function machineNameSystem(dt: number) {
-        let step: number = 0.1
-        const bot: number = 2
-        const top: number = 4
-        let pos: Vector3 = Transform.getMutable(MachineName).position
-
-        if (pos.y > top || pos.y < bot) {
-            step = -step   //This is wrong: Step don't save value, is declared on each tick
-        }
-
-        Transform.getMutable(MachineName).position.y = Transform.getMutable(MachineName).position.y + step
-
-    } */
-
-    //engine.addSystem(machineNameSystem)
-
     const postersWall = engine.addEntity()
     const bucketParent = engine.addEntity()
     const popcornBucket = engine.addEntity()
@@ -64,6 +47,30 @@ export function main() {
 
     Billboard.getOrCreateMutable(machineName, { billboardMode: 2 })
     TextShape.getOrCreateMutable(machineName, { text: `Free\nPopcorn\nhere\nvv`, fontSize: 2 })
+
+
+    LerpTransformComponent.create(machineName, {
+        start: Vector3.create(0, 2, 0),
+        end: Vector3.create(0, 2.1, 0),
+        fraction: 0,
+        speed: 3
+    })
+
+    function LerpMove(dt: number) {
+        let transform = Transform.getMutable(machineName)
+        let lerp = LerpTransformComponent.getMutable(machineName)
+        if (lerp.fraction < 1) {
+            lerp.fraction += dt * lerp.speed
+            transform.position = Vector3.lerp(lerp.start, lerp.end, lerp.fraction)
+        } else {
+            lerp.fraction = 0
+            const inverse_positions = [lerp.end, lerp.start]
+            lerp.start = inverse_positions[0]
+            lerp.end = inverse_positions[1]
+        }
+    }
+
+    engine.addSystem(LerpMove)
 
     let Text: string = AudioSource.getMutable(popcornMachine).playing ? "Turn off" : "Start"
 

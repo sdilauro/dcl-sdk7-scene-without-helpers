@@ -1,29 +1,75 @@
-export function setUVs(rows: number, cols: number) {
-    return [
-        // North side of unrortated plane
-        0, //lower-left corner
-        0,
+import { engine, VideoPlayer } from "@dcl/sdk/ecs"
 
-        cols, //lower-right corner
-        0,
+export function setScreenSource(link: string) {
+    for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
+        const videoPlayer = VideoPlayer.getMutableOrNull(entity)
+        if (videoPlayer) {
+            videoPlayer.src = link
+        }
+    }
+}
 
-        cols, //upper-right corner
-        rows,
+export function playVideo() {
+    for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
+        const videoPlayer = VideoPlayer.getMutableOrNull(entity)
+        if (videoPlayer) {
+            videoPlayer.playing = true
+        }
+    }
+}
 
-        0, //upper left-corner
-        rows,
+export function loopVideo() {
+    for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
+        const videoPlayer = VideoPlayer.getMutableOrNull(entity)
+        if (videoPlayer) {
+            if (videoPlayer.loop) {
+                videoPlayer.loop = !videoPlayer.loop
+            } else { videoPlayer.loop = true }
+        }
+    }
+}
 
-        // South side of unrortated plane
-        cols, // lower-right corner
-        0,
+export function pauseVideo() {
+    for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
+        const videoPlayer = VideoPlayer.getMutableOrNull(entity)
+        if (videoPlayer) {
+            videoPlayer.playing = false
+        }
+    }
+}
 
-        0, // lower-left corner
-        0,
+export function stopVideo() {
+    for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
+        const videoPlayer = VideoPlayer.getMutableOrNull(entity)
+        if (videoPlayer) {
+            videoPlayer.playing = false
+            videoPlayer.position = 0
+        }
+    }
+}
 
-        0, // upper-left corner
-        rows,
+export function volUp() {
+    for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
+        const videoPlayer = VideoPlayer.getMutableOrNull(entity)
+        if (videoPlayer) {
+            if (videoPlayer.volume) {
+                if (videoPlayer.volume <= 0.9) {
+                    videoPlayer.volume = videoPlayer.volume + 0.01
+                } else { videoPlayer.volume = 1 }
+            } else { videoPlayer.volume = 1 }
+        }
+    }
+}
 
-        cols, // upper-right corner
-        rows,
-    ]
+export function volDown() {
+    for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
+        const videoPlayer = VideoPlayer.getMutableOrNull(entity)
+        if (videoPlayer) {
+            if (videoPlayer.volume) {
+                if (videoPlayer.volume >= 0.1) {
+                    videoPlayer.volume = videoPlayer.volume - 0.01
+                } else { videoPlayer.volume = 0.001 }
+            } else { videoPlayer.volume = 1 }
+        }
+    }
 }

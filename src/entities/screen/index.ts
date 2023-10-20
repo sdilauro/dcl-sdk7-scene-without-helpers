@@ -23,6 +23,7 @@ export function screen() {
     VideoPlayer.create(screen, {
         src: 'assets/videos/starwarstrailer.mp4',
         playing: playing,
+        playbackRate: 5,
         volume: 0.2,
         loop: true
     })

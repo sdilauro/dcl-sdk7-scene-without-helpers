@@ -1,15 +1,13 @@
 import {
-  Animator,
   engine,
-  UiText,
-  VideoEvent,
+  UiCanvasInformation,
   VideoPlayer
 } from '@dcl/sdk/ecs'
 import { Color4 } from '@dcl/sdk/math'
-import ReactEcs, { Button, Dropdown, Input, Label, ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
-import { animations } from './utils/config'
+import ReactEcs, { Button, Input, Label, ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
+import { setScreenSource, playVideo, pauseVideo, stopVideo, volUp, volDown, loopVideo } from './utils/functions'
 
-var currentTextString = ""
+var currentTextString = "https://gateway.pinata.cloud/ipfs/Qmd3eMnYQsgXjuhad1fdUCBnCQvzpoLKwRkMUrBDjedGtT/Cozumel%20Diving.mp4"
 
 export function setupUi() {
   ReactEcsRenderer.setUiRenderer(uiComponent)
@@ -22,20 +20,22 @@ let volume_value: number = 1
 let playbackRate_value: number = 1
 let loop_value:boolean = false
 
-
-
-
+let margin_left: number = 0
+let margin_top: number = 0
+const ui_width: number = 450
+const ui_height: number = 250
 
 const uiComponent = () => (
-  
   <UiEntity
-    uiTransform={{
-      width: 400,
-      height: 275,
-      margin: '16px 0 8px 270px',
-      padding: 10,
-    }}
-    uiBackground={{ color: Color4.create(0.5, 0.8, 0.1, 0.6) }}
+  uiTransform={{
+    width: ui_width,
+    height: ui_height,
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: {top:margin_top, left:margin_left},
+    padding: 5,
+  }}
+  uiBackground={{ color: Color4.create(0.5, 0.8, 0.1, 0.6) }}
   >
     <UiEntity
       uiTransform={{
@@ -113,7 +113,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={playing_value?"True":"False"}
+          value={playing_value?"true":"false"}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -177,7 +177,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={String(volume_value)}
+          value={String(Math.round(volume_value * 100) / 100)}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -260,6 +260,7 @@ const uiComponent = () => (
           uiTransform={{
             width: '100%',margin:5
           }}
+          value={currentTextString}
           onChange={(e) =>{ currentTextString = e }}
           fontSize={14}
           placeholder={"SRC Link to play"}
@@ -267,40 +268,90 @@ const uiComponent = () => (
         />
         <Button
           uiTransform={{ width: 160, margin:5}}
-          value= 'Play'
+          value= 'Set SRC'
           variant='primary'
           fontSize={14}
           onMouseDown={() => {
             setScreenSource(currentTextString)
           }}
         />
-      </UiEntity>
+      </UiEntity>    
       <UiEntity
         uiTransform={{
           width: '100%',
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-        }}
+          }}
       >
-      </UiEntity>      
+        <Button
+          uiTransform={{ width: 160, margin:5}}
+          value= 'Play'
+          variant='primary'
+          fontSize={14}
+          onMouseDown={() => {
+            playVideo()
+          }}
+        />
+        <Button
+          uiTransform={{ width: 160, margin:5}}
+          value= 'Pause'
+          variant='primary'
+          fontSize={14}
+          onMouseDown={() => {
+            pauseVideo()
+          }}
+        />
+        <Button
+          uiTransform={{ width: 160, margin:5}}
+          value= 'Stop'
+          variant='primary'
+          fontSize={14}
+          onMouseDown={() => {
+            stopVideo()
+          }}
+        />
+        <Button
+          uiTransform={{ width: 160, margin:5}}
+          value= 'VOL+'
+          variant='primary'
+          fontSize={14}
+          onMouseDown={() => {
+            volUp()
+          }}
+        />
+        <Button
+          uiTransform={{ width: 160, margin:5}}
+          value= 'VOL-'
+          variant='primary'
+          fontSize={14}
+          onMouseDown={() => {
+            volDown()
+          }}
+        />
+        <Button
+          uiTransform={{ width: 160, margin:5}}
+          value= 'Loop'
+          variant='primary'
+          fontSize={14}
+          onMouseDown={() => {
+            loopVideo()
+          }}
+        />
+      </UiEntity>    
     </UiEntity>
   </UiEntity>
 )
 
-function setScreenSource(link: string) {
-  for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
-    const videoPlayer = VideoPlayer.getMutableOrNull(entity)
-    if (videoPlayer) {
-      videoPlayer.src = link
-      videoPlayer.playing = true
-    }
-  }
-}
+
 
 engine.addSystem(() => {
+  let canvas = UiCanvasInformation.get(engine.RootEntity)
+  margin_left = canvas.width - 15 - ui_width
+  margin_top = canvas.height - 15 - ui_height
+
   for (const [_, value] of engine.getEntitiesWith(VideoPlayer)) {
-    src_value = value.src.length>50 ? value.src.substring(0,50)+"..." : value.src
+    src_value = value.src.length > 40 ? value.src.substring(0,40) + "..." : value.src
     playing_value = value.playing ? value.playing : false
     position_value = value.position ? value.position : 0
     volume_value = value.volume ? value.volume : 1

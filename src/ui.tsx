@@ -1,6 +1,7 @@
 import {
   engine,
   UiCanvasInformation,
+  VideoEvent,
   VideoPlayer
 } from '@dcl/sdk/ecs'
 import { Color4 } from '@dcl/sdk/math'
@@ -13,17 +14,24 @@ export function setupUi() {
   ReactEcsRenderer.setUiRenderer(uiComponent)
 }
 
-let src_value: string = ''
-let playing_value:boolean = false
-let position_value: number = 0
-let volume_value: number = 1
-let playbackRate_value: number = 1
-let loop_value:boolean = false
+
+let currentOffsetValue: number = 0
+let stateValue: number = 0
+let tickNumberValue: number = 0
+let timestampValue: number = 0
+let videoLengthValue: number = 0
+
+let srcValue: string = ''
+let playingValue:boolean = false
+let positionValue: number = 0
+let volumeValue: number = 1
+let playbackRateValue: number = 1
+let loopValue:boolean = false
 
 let margin_left: number = 0
 let margin_top: number = 0
 const ui_width: number = 450
-const ui_height: number = 250
+const ui_height: number = 400
 
 const uiComponent = () => (
   <UiEntity
@@ -34,9 +42,189 @@ const uiComponent = () => (
     alignItems: 'center',
     margin: {top:margin_top, left:margin_left},
     padding: 5,
+    flexDirection:'column'
   }}
   uiBackground={{ color: Color4.create(0.5, 0.8, 0.1, 0.6) }}
   >
+    <UiEntity
+      uiTransform={{
+        width: '100%',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        padding:10
+      }}
+      uiBackground={{ color: Color4.fromHexString("#70ac76ff") }}
+    >
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 30,
+          alignItems: 'flex-start',
+        }}
+        uiText={{ value: 'Last Event', fontSize: 18, textAlign: 'middle-left' }}
+      />
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Current Offset:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(currentOffsetValue)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="State:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(stateValue)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Tick Number:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(tickNumberValue)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Timestamp:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(timestampValue)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Video Length:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(videoLengthValue)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />  
+      </UiEntity>  
+    </UiEntity>
     <UiEntity
       uiTransform={{
         width: '100%',
@@ -81,7 +269,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={src_value}
+          value={srcValue}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -113,7 +301,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={playing_value?"true":"false"}
+          value={playingValue?"true":"false"}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -145,7 +333,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={String(position_value)}
+          value={String(positionValue)}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -177,7 +365,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={String(Math.round(volume_value * 100) / 100)}
+          value={String(Math.round(volumeValue * 100) / 100)}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -209,7 +397,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={String(playbackRate_value)}
+          value={String(playbackRateValue)}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -241,7 +429,7 @@ const uiComponent = () => (
             height: 20,
             alignItems: 'flex-start',
           }}
-          value={String(loop_value)}
+          value={String(loopValue)}
           color={Color4.White()}
           fontSize={12}
           font="serif"
@@ -340,6 +528,7 @@ const uiComponent = () => (
         />
       </UiEntity>    
     </UiEntity>
+    
   </UiEntity>
 )
 
@@ -351,13 +540,26 @@ engine.addSystem(() => {
   margin_top = canvas.height - 15 - ui_height
 
   for (const [_, value] of engine.getEntitiesWith(VideoPlayer)) {
-    src_value = value.src.length > 40 ? value.src.substring(0,40) + "..." : value.src
-    playing_value = value.playing ? value.playing : false
-    position_value = value.position ? value.position : 0
-    volume_value = value.volume ? value.volume : 1
-    playbackRate_value = value.playbackRate ? value.playbackRate : 1
-    loop_value = value.loop ? value.loop : false
+    srcValue = value.src.length > 40 ? value.src.substring(0, 40) + "..." : value.src
+    playingValue = value.playing ? value.playing : false
+    positionValue = value.position ? value.position : 0
+    volumeValue = value.volume ? value.volume : 1
+    playbackRateValue = value.playbackRate ? value.playbackRate : 1
+    loopValue = value.loop ? value.loop : false
   }
-
 })
+
+engine.addSystem(() => {
+    for (const [_, value] of engine.getEntitiesWith(VideoEvent)) {
+      for (const event of value) {
+        console.log({event})
+        currentOffsetValue = event.currentOffset
+        stateValue = event.state
+        tickNumberValue = event.tickNumber
+        timestampValue = event.timestamp
+        videoLengthValue = event.videoLength
+      }
+    }
+  }
+)
 

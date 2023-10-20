@@ -1,19 +1,21 @@
-import { engine, InputAction, Material, MeshCollider, MeshRenderer, PBMaterial_PbrMaterial, PBMeshRenderer, PointerEvents, pointerEventsSystem, Transform, VideoPlayer } from '@dcl/sdk/ecs'
+import { engine, InputAction, Material, MeshCollider, MeshRenderer, PBMaterial_PbrMaterial, PBMeshRenderer, PBVideoEvent, PointerEvents, pointerEventsSystem, Transform, VideoEvent, videoEventsSystem, VideoPlayer } from '@dcl/sdk/ecs'
 import { Color3, Color4, Vector3 } from '@dcl/sdk/math'
 
 
 
-export function cinema() {
+export function screen() {
 
     let playing: boolean = false
 
     const frame = engine.addEntity()
+
     Transform.create(frame, { position: Vector3.create(8, 4.2, 15), scale: Vector3.create(14, 7.9, 0.5) })
     MeshRenderer.createOrReplace(frame, { mesh: { $case: 'box', box: { uvs: [] } } })
     MeshCollider.createOrReplace(frame, { mesh: { $case: 'box', box: { uvs: [] } } })
     Material.setPbrMaterial(frame, { albedoColor: Color4.Black() })
 
     const screen = engine.addEntity()
+
     MeshRenderer.createOrReplace(screen, { mesh: { $case: 'plane', plane: { uvs: [] } } })
     Transform.create(screen, { position: { x: 0, y: 0, z: -0.55 }, scale: Vector3.create(0.9, 0.9, 1), parent: frame })
 
@@ -64,8 +66,15 @@ export function cinema() {
 
         })
 
-
-
+    /*  engine.addSystem(() => {
+ 
+         for (const [_, value] of engine.getEntitiesWith(VideoEvent)) {
+             for (const event of value) {
+                 console.log({ videoEvent: event })
+             }
+         }
+ 
+     }) */
 
     return frame
 }

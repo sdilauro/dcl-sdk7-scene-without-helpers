@@ -1,6 +1,8 @@
 import {
   Animator,
   engine,
+  UiText,
+  VideoEvent,
   VideoPlayer
 } from '@dcl/sdk/ecs'
 import { Color4 } from '@dcl/sdk/math'
@@ -12,6 +14,17 @@ var currentTextString = ""
 export function setupUi() {
   ReactEcsRenderer.setUiRenderer(uiComponent)
 }
+
+let src_value: string = ''
+let playing_value:boolean = false
+let position_value: number = 0
+let volume_value: number = 1
+let playbackRate_value: number = 1
+let loop_value:boolean = false
+
+
+
+
 
 const uiComponent = () => (
   
@@ -29,8 +42,8 @@ const uiComponent = () => (
         width: '100%',
         height: '100%',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'space-around',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
         padding:10
       }}
       uiBackground={{ color: Color4.fromHexString("#70ac76ff") }}
@@ -38,17 +51,203 @@ const uiComponent = () => (
       <UiEntity
         uiTransform={{
           width: '100%',
-          height: 80,
-          
+          height: 30,
+          alignItems: 'flex-start',
         }}
-        uiBackground={{
-          textureMode: 'center',
-          texture: {
-            src: 'images/scene-thumbnail.png',
-          },
-        }}
-        uiText={{ value: 'SDK7', fontSize: 18 }}
+        uiText={{ value: 'VideoPlayer State:', fontSize: 18, textAlign: 'middle-left' }}
       />
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="SRC:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={src_value}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Playing:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={playing_value?"True":"False"}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Position:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(position_value)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Volume:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(volume_value)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Playback Rate:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(playbackRate_value)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: 20,
+          alignItems: 'flex-start',
+        }}
+      >
+        <Label
+          uiTransform={{
+            width: '40%',
+            height: 20,
+            alignItems: 'flex-start', 
+          }}
+          value="Loop:"
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-right"
+        />
+        <Label
+          uiTransform={{
+            width: '100%',
+            height: 20,
+            alignItems: 'flex-start',
+          }}
+          value={String(loop_value)}
+          color={Color4.White()}
+          fontSize={12}
+          font="serif"
+          textAlign="middle-left"
+        />
+      </UiEntity>
       <UiEntity
         uiTransform={{
           width: '100%',
@@ -84,35 +283,10 @@ const uiComponent = () => (
           justifyContent: 'space-between',
         }}
       >
-        <Label
-          uiTransform={{ width: 160, height:20 }}
-          value= 'Wolf animation'
-          fontSize={14}
-          color={Color4.Black()}
-         
-        />
-        <Dropdown
-          options= {["Run", "Walk", "Creep", "Idle", "Site"]}
-          uiTransform={{
-            width: '100%', margin:5
-          }}
-          onChange={selectAnim}
-          fontSize={14}
-        />
       </UiEntity>      
     </UiEntity>
   </UiEntity>
 )
-
-function selectAnim(index: number) {
-  for (const [entity] of engine.getEntitiesWith(Animator)) {
-    const animator = Animator.getMutableOrNull(entity)
-    if (animator) {
-      Animator.playSingleAnimation(entity, animations[index])
-    }
-}
-}
-
 
 function setScreenSource(link: string) {
   for (const [entity] of engine.getEntitiesWith(VideoPlayer)) {
@@ -123,4 +297,16 @@ function setScreenSource(link: string) {
     }
   }
 }
+
+engine.addSystem(() => {
+  for (const [_, value] of engine.getEntitiesWith(VideoPlayer)) {
+    src_value = value.src.length>50 ? value.src.substring(0,50)+"..." : value.src
+    playing_value = value.playing ? value.playing : false
+    position_value = value.position ? value.position : 0
+    volume_value = value.volume ? value.volume : 1
+    playbackRate_value = value.playbackRate ? value.playbackRate : 1
+    loop_value = value.loop ? value.loop : false
+  }
+
+})
 

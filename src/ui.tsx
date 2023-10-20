@@ -552,7 +552,6 @@ engine.addSystem(() => {
 engine.addSystem(() => {
     for (const [_, value] of engine.getEntitiesWith(VideoEvent)) {
       for (const event of value) {
-        console.log({event})
         currentOffsetValue = event.currentOffset
         stateValue = event.state
         tickNumberValue = event.tickNumber
